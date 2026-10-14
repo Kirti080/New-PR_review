@@ -45,3 +45,28 @@ data/tasks.json    Automatically created task data
 5. Try a title containing `<b>hello</b>`: it should display as plain text.
 
 This is a local learning project without user accounts: all visitors to the same running instance share the task list. The PHP development server is for local use. Back up `data/tasks.json` to retain your tasks.
+
+## Python chaos test
+
+Requires Python 3.8+. Stop the PHP server while injecting or restoring so the
+script and PHP cannot overwrite each other's writes. From the project folder:
+
+```sh
+python tools/chaos.py inject
+```
+
+This backs up the original task file and adds 10 malformed entries (scalars,
+missing fields, and incorrect field types). Restart PHP and view each filter:
+valid tasks and their counts should remain unchanged, with no rendering errors.
+The validation in `app.php` should reject the injected entries. Python runs only
+when you invoke this tool; it is not required for normal app use.
+
+Stop PHP again and restore the original data:
+
+```sh
+python tools/chaos.py restore
+```
+
+Restoring replaces the task list with the backup, discarding edits made during
+the test. Repeated injection is blocked until you restore. If no task file
+existed before the test, restoring produces an empty task list.
