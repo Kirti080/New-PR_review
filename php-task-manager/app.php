@@ -29,6 +29,17 @@ function taskStore(?callable $change = null): array
         if (!is_array($tasks)) {
             throw new RuntimeException('Invalid task storage.');
         }
+        // Treat persisted JSON as untrusted: only complete, correctly typed
+        // records may reach mutations, typed filters, or the HTML templates.
+        $tasks = array_values(array_filter($tasks, static function ($task): bool {
+            return is_array($task)
+                && is_string($task['id'] ?? null)
+                && $task['id'] !== ''
+                && is_string($task['title'] ?? null)
+                && trim($task['title']) !== ''
+                && strlen($task['title']) <= 200
+                && is_bool($task['done'] ?? null);
+        }));
         if ($change !== null) {
             $tasks = $change($tasks);
             $json = json_encode(array_values($tasks), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
