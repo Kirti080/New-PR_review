@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
 
 
- """Inject malformed records into local task storage, or restore its backup."""
+"""Inject malformed records into local task storage, or restore its backup."""
 
 import argparse
 import json
