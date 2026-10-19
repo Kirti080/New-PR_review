@@ -3,7 +3,7 @@
 import argparse
 import json
 import os
-from pathlib import
+from pathlib import Path
 
 
 def run(action: str, data_dir: Path) -> None:
