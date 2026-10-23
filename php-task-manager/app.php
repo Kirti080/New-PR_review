@@ -17,7 +17,13 @@ function taskStore(?callable $change = null): array
     $directory = __DIR__ . '/data';
     if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
         throw new RuntimeException('Cannot create the data directory.');
-    flock($file, LOCK_EX)) {
+    }
+    $file = fopen($directory . '/tasks.json', 'c+');
+    if ($file === false) {
+        throw new RuntimeException('Cannot open the task storage.');
+    }
+    try {
+        if (!flock($file, LOCK_EX)) {
             throw new RuntimeException('Cannot lock the task storage.');
         }
         rewind($file);
