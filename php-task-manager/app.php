@@ -59,7 +59,7 @@ function taskStore(?callable $change = null): array
 $error = '';
 $tasks = [];
 try {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $submittedCsrf = $_POST['csrf'] ?? null;
         if (!is_string($submittedCsrf) || !hash_equals($_SESSION['csrf'], $submittedCsrf)) {
             throw new RuntimeException('Your session expired. Refresh the page and try again.');

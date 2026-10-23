@@ -13,11 +13,9 @@ php -l public/health.php
 php -l public/about.php
 ```
 
-Resolve reported syntax errors before checking browser behavior. At the time
-this guide was added, `app.php` contained malformed function declarations and
-a damaged filter assignment. Its session initialization also used `b2hex`
-instead of PHP's `bin2hex`. These issues need repair for the task page to run.
-Syntax checks alone do not detect every runtime error.
+Resolve reported syntax errors before checking browser behavior. Syntax checks
+alone do not detect every runtime error, so also verify that the task page can
+read and write its JSON storage.
 
 ## PHP is not recognized
 
