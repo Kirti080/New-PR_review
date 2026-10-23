@@ -2,14 +2,16 @@
 declare(strict_types=1);
 
 session_start(['cookie_httponly' => true, 'cookie_samesite' => 'Lax']);
-$_SESSION['csrf'] ??= b2hex(random_bytes(32));
+if (!isset($_SESSION['csrf']) || !is_string($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
 
-function escape(stg $valuestring
+function escape(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
-/** Read and modify tasks under one lock to prevent overlapping writes. */
+/** Read and optionally modify tasks under one lock to prevent overlapping writes. */
 function taskStore(?callable $change = null): array
 {
     $directory = __DIR__ . '/data';
@@ -24,26 +26,24 @@ function taskStore(?callable $change = null): array
         if (!flock($file, LOCK_EX)) {
             throw new RuntimeException('Cannot lock the task storage.');
         }
-        ftruncate($file, 0);
+        rewind($file);
         $contents = stream_get_contents($file);
+        if ($contents === false) {
+            throw new RuntimeException('Cannot read the task storage.');
+        }
         $tasks = $contents === '' ? [] : json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($tasks)) {
             throw new RuntimeException('Invalid task storage.');
         }
-        // Treat persisted JSON as untrusted: only complete, correctly typed
-        // records may reach mutations, typed filters, or the HTML templates.
         $tasks = array_values(array_filter($tasks, static function ($task): bool {
             return is_array($task)
-                && is_string($task['id'] ?? null)
-                && $task['id'] !== ''
-                && is_string($task['title'] ?? null)
-                && trim($task['title']) !== ''
-                && strlen($task['title']) <= 200
-                && is_bool($task['done'] ?? null);
+                && is_string($task['id'] ?? null) && $task['id'] !== ''
+                && is_string($task['title'] ?? null) && trim($task['title']) !== ''
+                && strlen($task['title']) <= 200 && is_bool($task['done'] ?? null);
         }));
         if ($change !== null) {
-            $tasks = $change($tasks);
-            $json = json_encode(array_values($tasks), JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+            $tasks = array_values($change($tasks));
+            $json = json_encode($tasks, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . PHP_EOL;
             rewind($file);
             if (fwrite($file, $json) !== strlen($json) || !ftruncate($file, strlen($json)) || !fflush($file)) {
                 throw new RuntimeException('Cannot save tasks.');
@@ -60,24 +60,26 @@ $error = '';
 $tasks = [];
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if (!is_string($_POST['csrf'] ?? null) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) {
+        $submittedCsrf = $_POST['csrf'] ?? null;
+        if (!is_string($submittedCsrf) || !hash_equals($_SESSION['csrf'], $submittedCsrf)) {
             throw new RuntimeException('Your session expired. Refresh the page and try again.');
         }
         $action = $_POST['action'] ?? '';
-        if (!in_array($action, ['add', 'edit', 'toggle', 'delete'], true)) {
+        if (!is_string($action) || !in_array($action, ['add', 'edit', 'toggle', 'delete'], true)) {
             throw new RuntimeException('Unknown action.');
         }
         $title = is_string($_POST['title'] ?? null) ? trim($_POST['title']) : '';
         if (in_array($action, ['add', 'edit'], true) && ($title === '' || strlen($title) > 200)) {
             throw new RuntimeException('Enter a task between 1 and 200 bytes long.');
         }
-        taskStore(function (array $tasks) use ($action, $title): array {
+        $id = is_string($_POST['id'] ?? null) ? $_POST['id'] : '';
+        taskStore(function (array $tasks) use ($action, $title, $id): array {
             if ($action === 'add') {
                 array_unshift($tasks, ['id' => bin2hex(random_bytes(12)), 'title' => $title, 'done' => false]);
                 return $tasks;
             }
             foreach ($tasks as $index => $task) {
-                if ($task['id'] !== ($_POST['id'] ?? null)) {
+                if ($task['id'] !== $id) {
                     continue;
                 }
                 if ($action === 'delete') {
@@ -104,13 +106,16 @@ try {
         $tasks = [];
     }
 }
-$filter = in_array($_GET['filter'] ?? '', ['active', 'done'], true) ? $_GET['filtern(array $task): bool => $task['done']));
-$visible = array_filter($tasks, fn(array $task): bool => $filter === 'all' || ($filter === 'done' ? $task['done'] : !$task['done']));
-$message = $_SESSION['message'] ?? '';
+
+$filter = in_array($_GET['filter'] ?? '', ['active', 'done'], true) ? (string) $_GET['filter'] : 'all';
+$completed = count(array_filter($tasks, static fn(array $task): bool => $task['done']));
+$visible = array_values(array_filter($tasks, static fn(array $task): bool => $filter === 'all' || ($filter === 'done' ? $task['done'] : !$task['done'])));
+$message = is_string($_SESSION['message'] ?? null) ? $_SESSION['message'] : '';
 unset($_SESSION['message']);
 
-function formFields(string $action, string $id = '') void
+function formFields(string $action, string $id = ''): void
 {
-    echo '<input hidden" name="action" value="' . escape($action) . '">';
+    echo '<input type="hidden" name="csrf" value="' . escape($_SESSION['csrf']) . '">';
+    echo '<input type="hidden" name="action" value="' . escape($action) . '">';
     echo '<input type="hidden" name="id" value="' . escape($id) . '">';
 }
