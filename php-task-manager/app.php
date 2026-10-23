@@ -31,7 +31,15 @@ function taskStore(?callable $change = null): array
         }
         $tasks = array_values(array_filter($tasks, static function ($task): bool {
             return is_array($task)
-                && isfile, $json) !== strlen($json) || !ftruncate($file, strlen($json)) || !fflush($file)) {
+                && is_string($task['id'] ?? null) && $task['id'] !== ''
+                && is_string($task['title'] ?? null) && trim($task['title']) !== ''
+                && strlen($task['title']) <= 200 && is_bool($task['done'] ?? null);
+        }));
+        if ($change !== null) {
+            $tasks = array_values($change($tasks));
+            $json = json_encode($tasks, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . PHP_EOL;
+            rewind($file);
+            if (fwrite($file, $json) !== strlen($json) || !ftruncate($file, strlen($json)) || !fflush($file)) {
                 throw new RuntimeException('Cannot save tasks.');
             }
         }
