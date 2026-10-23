@@ -23,7 +23,10 @@ def run(action: str, data_dir: Path) -> None:
         raise ValueError("A backup already exists. Run restore before injecting again.")
 
     original = tasks.read_bytes() if tasks.exists() else b"[]\n"
-    records = json.loads(original)
+    try:
+        records = json.loads(original)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Task storage is not valid JSON: {error.msg}.") from error
     if not isinstance(records, list):
         raise ValueError("Expected a JSON list. Nothing was changed.")
 
@@ -39,11 +42,12 @@ def run(action: str, data_dir: Path) -> None:
         {"id": "wrong-title", "title": {"unexpected": "object"}, "done": False},
         {"id": "empty-title", "title": "  ", "done": False},
     ])
+
     # Exclusive creation protects the recovery copy from repeated injections.
     with backup.open("xb") as handle:
         handle.write(original)
     try:
-        temporary.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        temporary.write_text(json.dumps(records, indent=2) + "\n", encoding="utf-8")
         os.replace(temporary, tasks)
     finally:
         temporary.unlink(missing_ok=True)
@@ -63,12 +67,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-

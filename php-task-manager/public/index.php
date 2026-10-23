@@ -1,4 +1,4 @@
-<?php require dirname(__DIR__) . '/bootstrap.php'; ?>
+<?php require dirname(__DIR__) . '/app.php'; ?>
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,7 +9,7 @@
 </head>
 <body>
 <main>
-    <header><a class="brand" href="./"><span class="logo">✓</span> daylist<span class="dot">.</span></a><span class="tag">A LITTLE FOCUS GOES A LONG WAY</span></header>
+    <header><a class="brand" href="./"><span class="logo" aria-hidden="true">✓</span> daylist<span class="dot">.</span></a><span class="tag">A LITTLE FOCUS GOES A LONG WAY</span></header>
     <section class="intro"><p class="eyebrow">YOUR EVERYDAY WORKSPACE</p><h1>Small steps.<br><span>Good progress.</span></h1><p>Clear your mind. Write it down. Make things happen.</p></section>
     <section class="stats" aria-label="Task statistics">
         <div><strong><?= count($tasks) ?></strong><span>Total tasks</span></div>
@@ -28,7 +28,7 @@
         <nav aria-label="Filter tasks"><?php foreach (['all' => 'All tasks', 'active' => 'In progress', 'done' => 'Completed'] as $key => $label): ?><a href="?filter=<?= $key ?>" <?= $filter === $key ? 'aria-current="page" class="selected"' : '' ?>><?= $label ?></a><?php endforeach; ?></nav>
         <div class="task-list">
         <?php if (!$visible): ?>
-            <div class="empty"><span>✦</span><h2><?= $filter === 'all' ? 'A fresh start awaits' : 'Nothing here just yet' ?></h2><p><?= $filter === 'all' ? 'Add your first task above and take it one step at a time.' : 'Tasks matching this filter will appear here.' ?></p></div>
+            <div class="empty"><span aria-hidden="true">✦</span><h2><?= $filter === 'all' ? 'A fresh start awaits' : 'Nothing here just yet' ?></h2><p><?= $filter === 'all' ? 'Add your first task above and take it one step at a time.' : 'Tasks matching this filter will appear here.' ?></p></div>
         <?php endif; ?>
         <?php foreach ($visible as $task): ?>
             <article class="task <?= $task['done'] ? 'done' : '' ?>">
